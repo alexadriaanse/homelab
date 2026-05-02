@@ -1,0 +1,5 @@
+# Injected secret files (generated from env.tpl at runtime)
+.env
+
+# 1Password service account token
+.op-token

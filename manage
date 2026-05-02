@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OP_IMAGE="1password/op:2"
+OP_TOKEN_FILE="$SCRIPT_DIR/.op-token"
+
+if [[ -f "$OP_TOKEN_FILE" ]]; then
+    OP_SERVICE_ACCOUNT_TOKEN="$(cat "$OP_TOKEN_FILE")"
+    export OP_SERVICE_ACCOUNT_TOKEN
+else
+    echo "error: token file not found: $OP_TOKEN_FILE" >&2
+    exit 1
+fi
+
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") <command> [app]
+
+Commands:
+  up       [app]  Inject secrets and start containers
+  down     [app]  Stop containers
+  restart  [app]  Inject secrets and restart containers
+  recreate [app]  Inject secrets and force-recreate containers
+  update   [app]  Pull latest images, inject secrets, and restart
+  logs     <app>  Tail logs (app required)
+  status         Show status of all apps
+
+If [app] is omitted, the command runs for all discovered apps.
+EOF
+}
+
+# Find all app directories (any subdir containing a compose.yml)
+get_all_apps() {
+    find "$SCRIPT_DIR/" -maxdepth 2 -name "compose.yml" -exec dirname {} \; | sort
+}
+
+resolve_app() {
+    local app="$1"
+    local dir="$SCRIPT_DIR/$app"
+    if [[ ! -f "$dir/compose.yml" ]]; then
+        echo "error: no compose.yml found for '$app'" >&2
+        exit 1
+    fi
+    echo "$dir"
+}
+
+inject_secrets() {
+    local dir="$1"
+    if [[ -f "$dir/env.tpl" ]]; then
+        echo "  [$(basename "$dir")] injecting secrets..."
+        docker run --rm \
+            --entrypoint op \
+            --user root \
+            -e OP_SERVICE_ACCOUNT_TOKEN \
+            -v "$dir:/work" \
+            "$OP_IMAGE" \
+            inject -i /work/env.tpl -o /work/.env
+    fi
+}
+
+compose() {
+    local dir="$1"
+    shift
+    local args=(-f "$dir/compose.yml")
+    [[ -f "$dir/.env" ]] && args+=(--env-file "$dir/.env")
+    docker compose "${args[@]}" "$@"
+}
+
+cmd_up() {
+    local dir="$1"
+    inject_secrets "$dir"
+    compose "$dir" up -d
+}
+
+cmd_down() {
+    local dir="$1"
+    compose "$dir" down
+}
+
+cmd_restart() {
+    local dir="$1"
+    inject_secrets "$dir"
+    compose "$dir" up -d
+}
+
+cmd_recreate() {
+    local dir="$1"
+    inject_secrets "$dir"
+    compose "$dir" up -d --force-recreate
+}
+
+cmd_update() {
+    local dir="$1"
+    compose "$dir" pull
+    inject_secrets "$dir"
+    compose "$dir" up -d
+}
+
+cmd_logs() {
+    local dir="$1"
+    compose "$dir" logs -f
+}
+
+cmd_status() {
+    for dir in $(get_all_apps); do
+        echo "=== $(basename "$dir") ==="
+        compose "$dir" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+        echo
+    done
+}
+
+run_for_app() {
+    local cmd="$1"
+    local dir="$2"
+    echo ">>> $(basename "$dir")"
+    "cmd_$cmd" "$dir"
+}
+
+run_for_all() {
+    local cmd="$1"
+    local apps
+    mapfile -t apps < <(get_all_apps)
+    if [[ ${#apps[@]} -eq 0 ]]; then
+        echo "no apps found (no compose.yml in subdirectories)" >&2
+        exit 1
+    fi
+    for dir in "${apps[@]}"; do
+        run_for_app "$cmd" "$dir"
+    done
+}
+
+# --- main ---
+
+if [[ $# -eq 0 ]]; then
+    usage
+    exit 1
+fi
+
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+    up|down|restart|recreate|update)
+        if [[ $# -gt 0 ]]; then
+            run_for_app "$COMMAND" "$(resolve_app "$1")"
+        else
+            run_for_all "$COMMAND"
+        fi
+        ;;
+    logs)
+        if [[ $# -eq 0 ]]; then
+            echo "error: 'logs' requires an app name" >&2
+            exit 1
+        fi
+        cmd_logs "$(resolve_app "$1")"
+        ;;
+    status)
+        cmd_status
+        ;;
+    *)
+        echo "error: unknown command '$COMMAND'" >&2
+        echo
+        usage
+        exit 1
+        ;;
+esac
