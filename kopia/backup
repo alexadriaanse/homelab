@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "$SCRIPT_DIR/common.sh"
+
+# --- TrueNAS config export ---
+
+latest_config="$(ls -t /var/db/system/configs-*/TrueNAS-*/*.db 2>/dev/null | head -1)"
+if [[ -z "$latest_config" ]]; then
+    echo "error: could not find TrueNAS config database" >&2
+    exit 1
+fi
+echo "Exporting TrueNAS config from $latest_config"
+cp "$latest_config" /mnt/storage/backups/truenas-config.db
+
+# --- Build volume mounts ---
+
+declare -a vol_args=()
+
+add_dataset() {
+    local dataset="$1"
+    local container_path="$2"
+    local mountpoint snap_name
+
+    mountpoint="$(zfs get -H -o value mountpoint "$dataset")"
+    snap_name="$(zfs list -t snapshot -H -o name -s creation "$dataset" \
+        | grep '@auto-' | tail -1 | cut -d@ -f2)"
+
+    if [[ -z "$snap_name" ]]; then
+        echo "warning: no auto-snapshot found for $dataset, skipping" >&2
+        return
+    fi
+
+    echo "  $dataset @ $snap_name → $container_path"
+    vol_args+=(-v "$mountpoint/.zfs/snapshot/$snap_name:$container_path:ro")
+}
+
+echo "Resolving snapshots..."
+
+# Datasets (alphabetical)
+add_dataset storage/backups /backup/backups
+add_dataset storage/home    /backup/home
+add_dataset storage/homelab /backup/homelab
+while IFS= read -r dataset; do
+    rel="${dataset#storage/}"
+    add_dataset "$dataset" "/backup/$rel"
+done < <(zfs list -H -o name -r storage/appdata storage/media | sort)
+add_dataset storage/misc /backup/misc
+
+# --- Run backup ---
+
+echo "Starting kopia snapshot..."
+run_kopia "${vol_args[@]}" -- \
+    snapshot create /backup
