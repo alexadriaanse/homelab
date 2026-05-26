@@ -1,6 +1,6 @@
 # homelab
 
-Docker Compose stacks for a TrueNAS SCALE homelab, managed via a single `manage` script. Secrets are stored in 1Password and injected at runtime using the 1Password CLI Docker image.
+Docker Compose stacks for a TrueNAS SCALE homelab. Container lifecycle is managed by TrueNAS Custom Apps. Secrets are stored in 1Password and injected via the `manage` script using the 1Password CLI Docker image.
 
 ## Structure
 
@@ -18,13 +18,14 @@ homelab/
 
 ## Setup
 
-1. Clone this repo onto the TrueNAS host.
+1. Clone this repo onto the TrueNAS host (e.g. `/mnt/storage/homelab`).
 2. Create a 1Password service account and save its token to `.op-token`:
    ```
    echo "ops1_..." > .op-token
    chmod 600 .op-token
    ```
-3. Register `manage up` as a post-init script and `manage down` as a pre-shutdown script in TrueNAS (System → Advanced → Init/Shutdown Scripts). This ensures containers start after ZFS datasets are mounted and databases shut down cleanly before the system powers off.
+3. Inject secrets: `./manage inject`
+4. For each app, create a TrueNAS Custom App (Apps → Discover Apps → Custom App → Install via YAML) using the snippet from `./manage yaml <app>`.
 
 ## Usage
 
@@ -34,11 +35,8 @@ homelab/
 
 | Command | Description |
 |---|---|
-| `up [app]` | Inject secrets and start containers |
-| `down [app]` | Stop containers |
-| `restart [app]` | Inject secrets and restart containers |
-| `recreate [app]` | Inject secrets and force-recreate containers |
-| `update [app]` | Pull latest images, inject secrets, and restart |
+| `inject [app]` | Inject secrets from 1Password into `.env` files |
+| `yaml [app]` | Print TrueNAS Custom App YAML snippet |
 | `logs <app>` | Tail logs (app required) |
 | `status` | Show status of all apps |
 
@@ -51,4 +49,5 @@ If `[app]` is omitted, the command runs for all discovered apps.
    ```
    DB_PASSWORD=op://homelab/myapp/db-password
    ```
-3. Run `./manage up <app>`.
+3. Run `./manage inject <app>` to write the `.env` file.
+4. Create a TrueNAS Custom App using the YAML from `./manage yaml <app>`.

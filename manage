@@ -5,32 +5,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OP_IMAGE="1password/op:2"
 OP_TOKEN_FILE="$SCRIPT_DIR/.op-token"
 
-if [[ -f "$OP_TOKEN_FILE" ]]; then
-    OP_SERVICE_ACCOUNT_TOKEN="$(cat "$OP_TOKEN_FILE")"
-    export OP_SERVICE_ACCOUNT_TOKEN
-else
-    echo "error: token file not found: $OP_TOKEN_FILE" >&2
-    exit 1
-fi
-
 usage() {
     cat <<EOF
 Usage: $(basename "$0") <command> [app]
 
 Commands:
-  up       [app]  Inject secrets and start containers
-  down     [app]  Stop containers
-  restart  [app]  Inject secrets and restart containers
-  recreate [app]  Inject secrets and force-recreate containers
-  update   [app]  Pull latest images, inject secrets, and restart
-  logs     <app>  Tail logs (app required)
+  inject  [app]  Inject secrets from 1Password into .env files
+  yaml    [app]  Print TrueNAS Custom App YAML snippet
+  logs    <app>  Tail logs (app required)
   status         Show status of all apps
 
 If [app] is omitted, the command runs for all discovered apps.
 EOF
 }
 
-# Find all app directories (any subdir containing a compose.yml)
 get_all_apps() {
     find "$SCRIPT_DIR/" -maxdepth 2 -name "compose.yml" -exec dirname {} \; | sort
 }
@@ -45,7 +33,17 @@ resolve_app() {
     echo "$dir"
 }
 
-inject_secrets() {
+load_op_token() {
+    if [[ -f "$OP_TOKEN_FILE" ]]; then
+        OP_SERVICE_ACCOUNT_TOKEN="$(cat "$OP_TOKEN_FILE")"
+        export OP_SERVICE_ACCOUNT_TOKEN
+    else
+        echo "error: token file not found: $OP_TOKEN_FILE" >&2
+        exit 1
+    fi
+}
+
+cmd_inject() {
     local dir="$1"
     if [[ -f "$dir/env.tpl" ]]; then
         echo "  [$(basename "$dir")] injecting secrets..."
@@ -59,66 +57,33 @@ inject_secrets() {
     fi
 }
 
-compose() {
+cmd_yaml() {
     local dir="$1"
-    shift
-    local args=(-f "$dir/compose.yml")
-    [[ -f "$dir/.env" ]] && args+=(--env-file "$dir/.env")
-    docker compose "${args[@]}" "$@"
-}
-
-cmd_up() {
-    local dir="$1"
-    inject_secrets "$dir"
-    compose "$dir" up -d
-}
-
-cmd_down() {
-    local dir="$1"
-    compose "$dir" down
-}
-
-cmd_restart() {
-    local dir="$1"
-    inject_secrets "$dir"
-    compose "$dir" up -d
-}
-
-cmd_recreate() {
-    local dir="$1"
-    inject_secrets "$dir"
-    compose "$dir" up -d --force-recreate
-}
-
-cmd_update() {
-    local dir="$1"
-    compose "$dir" pull
-    inject_secrets "$dir"
-    compose "$dir" up -d
+    cat <<EOF
+include:
+  - $dir/compose.yml
+services: {}
+EOF
 }
 
 cmd_logs() {
     local dir="$1"
-    compose "$dir" logs -f
+    local args=(-f "$dir/compose.yml")
+    [[ -f "$dir/.env" ]] && args+=(--env-file "$dir/.env")
+    docker compose "${args[@]}" logs -f
 }
 
 cmd_status() {
-    for dir in $(get_all_apps); do
+    while IFS= read -r dir; do
         echo "=== $(basename "$dir") ==="
-        compose "$dir" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+        local args=(-f "$dir/compose.yml")
+        [[ -f "$dir/.env" ]] && args+=(--env-file "$dir/.env")
+        docker compose "${args[@]}" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
         echo
-    done
+    done < <(get_all_apps)
 }
 
-run_for_app() {
-    local cmd="$1"
-    local dir="$2"
-    echo ">>> $(basename "$dir")"
-    "cmd_$cmd" "$dir"
-}
-
-run_for_all() {
-    local cmd="$1"
+run_for_all_inject() {
     local apps
     mapfile -t apps < <(get_all_apps)
     if [[ ${#apps[@]} -eq 0 ]]; then
@@ -126,7 +91,7 @@ run_for_all() {
         exit 1
     fi
     for dir in "${apps[@]}"; do
-        run_for_app "$cmd" "$dir"
+        cmd_inject "$dir"
     done
 }
 
@@ -141,11 +106,23 @@ COMMAND="$1"
 shift
 
 case "$COMMAND" in
-    up|down|restart|recreate|update)
+    inject)
+        load_op_token
         if [[ $# -gt 0 ]]; then
-            run_for_app "$COMMAND" "$(resolve_app "$1")"
+            cmd_inject "$(resolve_app "$1")"
         else
-            run_for_all "$COMMAND"
+            run_for_all_inject
+        fi
+        ;;
+    yaml)
+        if [[ $# -gt 0 ]]; then
+            cmd_yaml "$(resolve_app "$1")"
+        else
+            while IFS= read -r dir; do
+                echo "# $(basename "$dir")"
+                cmd_yaml "$dir"
+                echo
+            done < <(get_all_apps)
         fi
         ;;
     logs)
