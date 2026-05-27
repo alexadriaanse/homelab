@@ -1,0 +1,14 @@
+ad_identifiers:
+  - _docker
+
+init_config:
+
+instances:
+  - collected_event_types:
+      - oom
+      - kill
+    collect_container_size: true
+    collect_images_stats: true
+    collect_image_size: true
+    collect_disk_stats: true
+    collect_exit_codes: true

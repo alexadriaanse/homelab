@@ -1,0 +1,9 @@
+logs:
+  - type: file
+    path: /host/root/mnt/storage/appdata/kopia/logs/backup.log
+    service: backup
+    source: kopia
+  - type: file
+    path: /host/root/mnt/storage/appdata/kopia/logs/cli-logs/latest.log
+    service: backup
+    source: kopia

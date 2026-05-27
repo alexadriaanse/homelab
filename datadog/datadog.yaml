@@ -1,0 +1,17 @@
+# Settings not expressible as DD_ environment variables.
+# Secrets (api_key, etc.) and standard flags are configured via environment variables in compose.yml.
+
+config_providers:
+  - name: docker
+    polling: true
+
+listeners:
+  - name: docker
+
+network_devices:
+  netflow:
+    enabled: true
+    listeners:
+      - flow_type: netflow9
+        port: 2055
+    reverse_dns_enrichment_enabled: true

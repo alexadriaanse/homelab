@@ -1,0 +1,15 @@
+logs:
+  - type: journald
+    path: /host/root/var/log/journal/
+  - type: file
+    path: /host/root/var/log/kern.log
+    service: kernel
+    source: linux
+  - type: file
+    path: /host/root/var/log/syslog
+    service: system
+    source: syslog
+  - type: file
+    path: /host/root/var/log/auth.log
+    service: system
+    source: auth
