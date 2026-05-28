@@ -1,0 +1,6 @@
+photos.alexandcarmen.com {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+	reverse_proxy immich-server:2283
+}

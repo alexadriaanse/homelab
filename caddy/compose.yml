@@ -1,0 +1,33 @@
+name: caddy
+
+services:
+  caddy:
+    image: ghcr.io/caddybuilds/caddy-cloudflare:latest
+    container_name: caddy
+    restart: unless-stopped
+    environment:
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /mnt/storage/appdata/caddy/data:/data
+      - /mnt/storage/appdata/caddy/config:/config
+    networks:
+      lan:
+        ipv4_address: 192.168.73.4
+        mac_address: "02:42:c0:a8:49:04"
+      proxy:
+
+networks:
+  lan:
+    name: caddy-lan
+    driver: macvlan
+    driver_opts:
+      parent: br1
+    ipam:
+      config:
+        - subnet: 192.168.73.0/24
+          gateway: 192.168.73.1
+          ip_range: 192.168.73.4/32
+  proxy:
+    name: proxy
+    driver: bridge

@@ -16,8 +16,9 @@ services:
       DB_DATABASE_NAME: immich
       REDIS_HOSTNAME: immich-redis
       IMMICH_MACHINE_LEARNING_URL: http://immich-machine-learning:3003
-    ports:
-      - "2283:2283"
+    networks:
+      - default
+      - proxy
     depends_on:
       immich-postgres:
         condition: service_healthy
@@ -75,3 +76,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+networks:
+  proxy:
+    name: proxy
+    external: true
