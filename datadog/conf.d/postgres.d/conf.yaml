@@ -1,0 +1,284 @@
+init_config:
+
+instances:
+  - host: immich-postgres
+    port: 5432
+    username: "%%env_IMMICH_POSTGRES_USER%%"
+    password: "%%env_IMMICH_POSTGRES_PASSWORD%%"
+    dbname: immich
+    reported_hostname: immich-db
+    relations:
+      - relation_regex: '.*'
+    collect_activity_metrics: true
+    collect_bloat_metrics: true
+    dbm: true
+    disable_generic_tags: true
+
+  - host: teslamate-postgres
+    port: 5432
+    username: "%%env_TESLAMATE_POSTGRES_USER%%"
+    password: "%%env_TESLAMATE_POSTGRES_PASSWORD%%"
+    dbname: teslamate
+    reported_hostname: teslamate-db
+    relations:
+      - relation_regex: '.*'
+    collect_activity_metrics: true
+    collect_bloat_metrics: true
+    dbm: true
+    disable_generic_tags: true
+    custom_queries:
+      - query: |
+          WITH all_efficiency_values AS (
+            SELECT
+              car_id,
+              ROUND((charge_energy_added / NULLIF(end_rated_range_km - start_rated_range_km, 0))::numeric, 3) * 100 AS efficiency,
+              count(*) AS count
+            FROM charging_processes
+            WHERE duration_min > 10
+              AND end_battery_level <= 95
+              AND start_rated_range_km IS NOT NULL
+              AND end_rated_range_km IS NOT NULL
+              AND charge_energy_added > 0
+              AND COALESCE(end_date, start_date) > LOCALTIMESTAMP - '1 month'::interval
+            GROUP BY 1, 2
+          ),
+          all_efficiency_values_with_row_numbers AS (
+            SELECT
+              car_id,
+              efficiency,
+              row_number() OVER (PARTITION BY car_id ORDER BY count DESC) row_number
+            FROM all_efficiency_values
+          ),
+          efficiencies AS (
+            SELECT car_id, efficiency
+            FROM all_efficiency_values_with_row_numbers
+            WHERE row_number = 1
+          ),
+          all_capacities AS (
+            SELECT
+              cp.car_id,
+              cp.end_date,
+              c.rated_battery_range_km * efficiency / c.usable_battery_level AS capacity,
+              row_number() OVER (PARTITION BY cp.car_id ORDER BY cp.end_date DESC) row_number,
+              max(cp.end_date) OVER (PARTITION BY cp.car_id) AS max_end_date
+            FROM charging_processes cp
+            INNER JOIN charges c ON c.charging_process_id = cp.id
+            INNER JOIN efficiencies e ON cp.car_id = e.car_id
+            WHERE cp.end_date IS NOT NULL
+              AND cp.charge_energy_added >= e.efficiency
+              AND c.usable_battery_level > 0
+          ),
+          capacities AS (
+            SELECT car_id, avg(capacity) capacity
+            FROM all_capacities
+            WHERE row_number <= 10 OR end_date = max_end_date
+            GROUP BY car_id
+          )
+          SELECT
+            c.vin,
+            c.name,
+            format('Model %s %s', c.model, c.marketing_name) AS marketing_name,
+            capacity
+          FROM capacities
+          JOIN cars c ON (capacities.car_id = c.id);
+        columns:
+          - name: vin
+            type: tag
+          - name: name
+            type: tag
+          - name: marketing_name
+            type: tag
+          - name: capacity
+            type: gauge
+        metric_prefix: teslamate
+      - query: |
+          WITH all_ranges AS (
+            SELECT car_id, date, rated_battery_range_km AS range, usable_battery_level AS usable_battery_level
+            FROM positions
+            WHERE rated_battery_range_km IS NOT NULL
+              AND usable_battery_level > 0
+              AND date > LOCALTIMESTAMP - '1 month'::interval
+
+            UNION ALL
+
+            SELECT car_id, date, rated_battery_range_km AS range, usable_battery_level AS usable_battery_level
+            FROM charges c
+            JOIN charging_processes p ON p.id = c.charging_process_id
+            WHERE usable_battery_level > 0
+              AND date > LOCALTIMESTAMP - '1 month'::interval
+          ),
+          all_ranges_with_row_numbers AS (
+            SELECT
+              car_id,
+              range * 100.0 / usable_battery_level / 1.609344 AS range,
+              row_number() OVER (PARTITION BY car_id ORDER BY date DESC)
+            FROM all_ranges
+          ),
+          ranges AS (
+            SELECT car_id, range
+            FROM all_ranges_with_row_numbers
+            WHERE row_number = 1
+          )
+          SELECT
+            c.vin,
+            c.name,
+            format('Model %s %s', c.model, c.marketing_name) AS marketing_name,
+            range
+          FROM ranges
+          JOIN cars c ON (ranges.car_id = c.id);
+        columns:
+          - name: vin
+            type: tag
+          - name: name
+            type: tag
+          - name: marketing_name
+            type: tag
+          - name: range
+            type: gauge
+        metric_prefix: teslamate
+      - query: |
+          WITH positions_with_row_number AS (
+            SELECT
+              car_id,
+              odometer,
+              row_number() OVER (PARTITION BY car_id ORDER BY date DESC) AS row_number
+            FROM positions
+            WHERE date > LOCALTIMESTAMP - '1 month'::interval
+          ),
+          odometers AS (
+            SELECT car_id, odometer
+            FROM positions_with_row_number
+            WHERE row_number = 1
+          )
+          SELECT
+            c.vin,
+            c.name,
+            format('Model %s %s', c.model, c.marketing_name) AS marketing_name,
+            floor(odometer / 1.609344) AS odometer
+          FROM odometers
+          JOIN cars c ON (odometers.car_id = c.id)
+        columns:
+          - name: vin
+            type: tag
+          - name: name
+            type: tag
+          - name: marketing_name
+            type: tag
+          - name: odometer
+            type: gauge
+        metric_prefix: teslamate
+      - query: |
+          WITH battery_levels_with_row_number AS (
+            SELECT
+              car_id,
+              battery_level,
+              row_number() OVER (PARTITION BY car_id ORDER BY date DESC) AS row_number
+            FROM positions
+            WHERE battery_level IS NOT NULL
+              AND date > LOCALTIMESTAMP - '1 month'::interval
+          ),
+          battery_levels AS (
+            SELECT car_id, battery_level
+            FROM battery_levels_with_row_number
+            WHERE row_number = 1
+          )
+          SELECT
+            c.vin,
+            c.name,
+            format('Model %s %s', c.model, c.marketing_name) AS marketing_name,
+            battery_level
+          FROM battery_levels
+          JOIN cars c ON (battery_levels.car_id = c.id)
+        columns:
+          - name: vin
+            type: tag
+          - name: name
+            type: tag
+          - name: marketing_name
+            type: tag
+          - name: battery_level
+            type: gauge
+        metric_prefix: teslamate
+      - query: |
+          WITH telemetry_with_row_number AS (
+            SELECT
+              car_id,
+              inside_temp,
+              outside_temp,
+              row_number() OVER (PARTITION BY car_id ORDER BY date DESC) AS row_number
+            FROM positions
+            WHERE inside_temp IS NOT NULL
+              AND outside_temp IS NOT NULL
+              AND date > LOCALTIMESTAMP - '1 month'::interval
+          ),
+          telemetry AS (
+            SELECT *
+            FROM telemetry_with_row_number
+            WHERE row_number = 1
+          )
+          SELECT
+            c.vin,
+            c.name,
+            format('Model %s %s', c.model, c.marketing_name) AS marketing_name,
+            round(inside_temp * 1.8 + 32, 1) AS inside_temp,
+            round(outside_temp * 1.8 + 32, 1) AS outside_temp
+          FROM telemetry
+          JOIN cars c ON (telemetry.car_id = c.id)
+        columns:
+          - name: vin
+            type: tag
+          - name: name
+            type: tag
+          - name: marketing_name
+            type: tag
+          - name: inside_temp
+            type: gauge
+          - name: outside_temp
+            type: gauge
+        metric_prefix: teslamate
+      - query: |
+          WITH telemetry_with_row_number AS (
+            SELECT
+              car_id,
+              tpms_pressure_fl,
+              tpms_pressure_fr,
+              tpms_pressure_rl,
+              tpms_pressure_rr,
+              row_number() OVER (PARTITION BY car_id ORDER BY date DESC) AS row_number
+            FROM positions
+            WHERE tpms_pressure_fl IS NOT NULL
+              AND tpms_pressure_fr IS NOT NULL
+              AND tpms_pressure_rl IS NOT NULL
+              AND tpms_pressure_rr IS NOT NULL
+              AND date > LOCALTIMESTAMP - '1 month'::interval
+          ),
+          telemetry AS (
+            SELECT *
+            FROM telemetry_with_row_number
+            WHERE row_number = 1
+          )
+          SELECT
+            c.vin,
+            c.name,
+            format('Model %s %s', c.model, c.marketing_name) AS marketing_name,
+            p.tire_position,
+            round(p.tpms_pressure * 14.50377, 1) AS tpms_pressure
+          FROM telemetry t
+          JOIN cars c ON (t.car_id = c.id),
+          LATERAL (VALUES
+            ('front left', t.tpms_pressure_fl),
+            ('front right', t.tpms_pressure_fr),
+            ('rear left', t.tpms_pressure_rl),
+            ('rear right', t.tpms_pressure_rr)) AS p(tire_position, tpms_pressure)
+        columns:
+          - name: vin
+            type: tag
+          - name: name
+            type: tag
+          - name: marketing_name
+            type: tag
+          - name: tire_position
+            type: tag
+          - name: tpms_pressure
+            type: gauge
+        metric_prefix: teslamate

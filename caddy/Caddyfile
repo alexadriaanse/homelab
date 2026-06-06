@@ -4,3 +4,20 @@ photos.alexandcarmen.com {
 	}
 	reverse_proxy immich-server:2283
 }
+
+teslamate.alexandcarmen.com {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+	basic_auth {
+		{env.TESLAMATE_BASIC_AUTH_USER} {env.TESLAMATE_BASIC_AUTH_HASH}
+	}
+	reverse_proxy teslamate:4000
+}
+
+tesla.alexandcarmen.com {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+	reverse_proxy teslamate-grafana:3000
+}

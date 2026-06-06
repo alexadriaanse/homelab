@@ -5,11 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OP_IMAGE="1password/op:2"
 OP_TOKEN_FILE="$SCRIPT_DIR/.op-token"
 
+SHARED_NETWORKS=(proxy monitoring)
+
 usage() {
     cat <<EOF
 Usage: $(basename "$0") <command> [app]
 
 Commands:
+  networks       Create shared Docker networks (idempotent; run once on setup)
   inject  [app]  Inject secrets from 1Password into .env files
   yaml    [app]  Print TrueNAS Custom App YAML snippet
   logs    <app>  Tail logs (app required)
@@ -43,6 +46,17 @@ load_op_token() {
     fi
 }
 
+cmd_networks() {
+    for name in "${SHARED_NETWORKS[@]}"; do
+        if docker network inspect "$name" &>/dev/null; then
+            echo "  [$name] already exists"
+        else
+            docker network create "$name"
+            echo "  [$name] created"
+        fi
+    done
+}
+
 cmd_inject() {
     local dir="$1"
     if [[ -f "$dir/env.tpl" ]]; then
@@ -53,7 +67,7 @@ cmd_inject() {
             -e OP_SERVICE_ACCOUNT_TOKEN \
             -v "$dir:/work" \
             "$OP_IMAGE" \
-            inject -i /work/env.tpl -o /work/.env
+            inject -f -i /work/env.tpl -o /work/.env
     fi
 }
 
@@ -106,6 +120,9 @@ COMMAND="$1"
 shift
 
 case "$COMMAND" in
+    networks)
+        cmd_networks
+        ;;
     inject)
         load_op_token
         if [[ $# -gt 0 ]]; then

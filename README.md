@@ -24,8 +24,11 @@ homelab/
    echo "ops1_..." > .op-token
    chmod 600 .op-token
    ```
-3. Inject secrets: `./manage inject`
-4. For each app, create a TrueNAS Custom App (Apps → Discover Apps → Custom App → Install via YAML) using the snippet from `./manage yaml <app>`.
+3. Create shared Docker networks: `./manage networks`
+4. Inject secrets: `./manage inject`
+5. For each app, create a TrueNAS Custom App (Apps → Discover Apps → Custom App → Install via YAML) using the snippet from `./manage yaml <app>`.
+
+> **Note:** Shared networks persist across Docker/TrueNAS restarts but may be lost if Docker storage is re-initialized. Re-run `./manage networks` if stacks fail to start with a "network not found" error.
 
 ## Usage
 
@@ -35,6 +38,7 @@ homelab/
 
 | Command | Description |
 |---|---|
+| `networks` | Create shared Docker networks (idempotent) |
 | `inject [app]` | Inject secrets from 1Password into `.env` files |
 | `yaml [app]` | Print TrueNAS Custom App YAML snippet |
 | `logs <app>` | Tail logs (app required) |

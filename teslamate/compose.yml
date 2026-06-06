@@ -1,0 +1,81 @@
+name: teslamate
+
+services:
+  teslamate:
+    image: teslamate/teslamate:latest
+    container_name: teslamate
+    restart: unless-stopped
+    environment:
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      DATABASE_USER: teslamate
+      DATABASE_PASS: ${DATABASE_PASS}
+      DATABASE_NAME: teslamate
+      DATABASE_HOST: teslamate-postgres
+      MQTT_HOST: teslamate-mosquitto
+    volumes:
+      - /mnt/storage/appdata/teslamate/import:/opt/app/import
+    cap_drop:
+      - ALL
+    networks:
+      - default
+      - proxy
+    depends_on:
+      teslamate-postgres:
+        condition: service_healthy
+      teslamate-mosquitto:
+        condition: service_started
+
+  teslamate-postgres:
+    image: postgres:18
+    container_name: teslamate-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: teslamate
+      POSTGRES_PASSWORD: ${DATABASE_PASS}
+      POSTGRES_DB: teslamate
+    volumes:
+      - /mnt/storage/appdata/postgres/teslamate:/var/lib/postgresql
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+    networks:
+      - default
+      - monitoring
+    healthcheck:
+      test: pg_isready --dbname=teslamate --username=teslamate
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  teslamate-mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: teslamate-mosquitto
+    restart: unless-stopped
+    command: mosquitto -c /mosquitto-no-auth.conf
+
+  teslamate-grafana:
+    image: teslamate/grafana:latest
+    container_name: teslamate-grafana
+    restart: unless-stopped
+    environment:
+      DATABASE_USER: teslamate
+      DATABASE_PASS: ${DATABASE_PASS}
+      DATABASE_NAME: teslamate
+      DATABASE_HOST: teslamate-postgres
+    volumes:
+      - /mnt/storage/appdata/teslamate/grafana:/var/lib/grafana
+    networks:
+      - default
+      - proxy
+    depends_on:
+      teslamate-postgres:
+        condition: service_healthy
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+  monitoring:
+    name: monitoring
+    external: true

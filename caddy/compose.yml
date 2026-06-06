@@ -7,6 +7,8 @@ services:
     restart: unless-stopped
     environment:
       CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+      TESLAMATE_BASIC_AUTH_USER: ${TESLAMATE_BASIC_AUTH_USER}
+      TESLAMATE_BASIC_AUTH_HASH: ${TESLAMATE_BASIC_AUTH_HASH}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - /mnt/storage/appdata/caddy/data:/data
@@ -30,4 +32,4 @@ networks:
           ip_range: 192.168.73.4/32
   proxy:
     name: proxy
-    driver: bridge
+    external: true
