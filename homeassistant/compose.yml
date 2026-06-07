@@ -11,6 +11,7 @@ services:
     volumes:
       - /mnt/storage/appdata/homeassistant:/config
     networks:
+      internal:
       vlan1:
         ipv4_address: 172.27.137.5
         mac_address: "02:42:ac:1b:89:05"
@@ -26,7 +27,23 @@ services:
       retries: 5
       start_period: 60s
 
+  matter-server:
+    image: ghcr.io/home-assistant-libs/python-matter-server:stable
+    container_name: matter-server
+    restart: unless-stopped
+    volumes:
+      - /mnt/storage/appdata/matter-server:/data
+    networks:
+      internal:
+      vlan1:
+        ipv4_address: 172.27.137.6
+        mac_address: "02:42:ac:1b:89:06"
+      vlan4:
+        ipv4_address: 192.168.75.3
+        mac_address: "02:42:c0:a8:4b:03"
+
 networks:
+  internal:
   vlan1:
     name: homeassistant-vlan1
     driver: macvlan
@@ -36,7 +53,7 @@ networks:
       config:
         - subnet: 172.27.137.0/24
           gateway: 172.27.137.1
-          ip_range: 172.27.137.5/32
+          ip_range: 172.27.137.4/30
   vlan4:
     name: homeassistant-vlan4
     driver: macvlan
@@ -46,7 +63,7 @@ networks:
       config:
         - subnet: 192.168.75.0/24
           gateway: 192.168.75.1
-          ip_range: 192.168.75.2/32
+          ip_range: 192.168.75.0/30
   proxy:
     name: proxy
     external: true
