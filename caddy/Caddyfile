@@ -1,8 +1,22 @@
+homeassistant.alexandcarmen.com {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+	reverse_proxy homeassistant:8123
+}
+
 photos.alexandcarmen.com {
 	tls {
 		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 	}
 	reverse_proxy immich-server:2283
+}
+
+tesla.alexandcarmen.com {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+	reverse_proxy teslamate-grafana:3000
 }
 
 teslamate.alexandcarmen.com {
@@ -13,11 +27,4 @@ teslamate.alexandcarmen.com {
 		{env.TESLAMATE_BASIC_AUTH_USER} {env.TESLAMATE_BASIC_AUTH_HASH}
 	}
 	reverse_proxy teslamate:4000
-}
-
-tesla.alexandcarmen.com {
-	tls {
-		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-	}
-	reverse_proxy teslamate-grafana:3000
 }

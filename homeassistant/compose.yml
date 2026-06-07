@@ -1,0 +1,55 @@
+name: homeassistant
+
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    privileged: true
+    environment:
+      TZ: America/Chicago
+    volumes:
+      - /mnt/storage/appdata/homeassistant:/config
+    networks:
+      vlan1:
+        ipv4_address: 172.27.137.5
+        mac_address: "02:42:ac:1b:89:05"
+      vlan4:
+        ipv4_address: 192.168.75.2
+        mac_address: "02:42:c0:a8:4b:02"
+      proxy:
+      monitoring:
+    healthcheck:
+      test: curl -f http://localhost:8123/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+networks:
+  vlan1:
+    name: homeassistant-vlan1
+    driver: macvlan
+    driver_opts:
+      parent: vlan1
+    ipam:
+      config:
+        - subnet: 172.27.137.0/24
+          gateway: 172.27.137.1
+          ip_range: 172.27.137.5/32
+  vlan4:
+    name: homeassistant-vlan4
+    driver: macvlan
+    driver_opts:
+      parent: vlan4
+    ipam:
+      config:
+        - subnet: 192.168.75.0/24
+          gateway: 192.168.75.1
+          ip_range: 192.168.75.2/32
+  proxy:
+    name: proxy
+    external: true
+  monitoring:
+    name: monitoring
+    external: true

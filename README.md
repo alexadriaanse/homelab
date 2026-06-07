@@ -30,6 +30,17 @@ homelab/
 
 > **Note:** Shared networks persist across Docker/TrueNAS restarts but may be lost if Docker storage is re-initialized. Re-run `./manage networks` if stacks fail to start with a "network not found" error.
 
+## Network prerequisites
+
+Some stacks use macvlan networks that require VLAN interfaces to exist on the TrueNAS host. These are configured once in **TrueNAS GUI → Network → Interfaces** and must be created before deploying the dependent stack.
+
+| Interface | VLAN tag | Parent   | Used by       |
+|-----------|----------|----------|---------------|
+| `vlan1`   | 1        | enp8s0   | homeassistant |
+| `vlan4`   | 4        | enp8s0   | homeassistant |
+
+After adding interfaces, click **Save** in the Network page to activate them. Verify with `ip link show type vlan` on the host.
+
 ## Usage
 
 ```
