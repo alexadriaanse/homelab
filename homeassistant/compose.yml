@@ -62,19 +62,20 @@ services:
     volumes:
       - /mnt/storage/appdata/matter-server:/data
     networks:
-      internal:
       vlan1:
         ipv4_address: 172.27.137.6
         mac_address: "02:42:ac:1b:89:06"
       vlan4:
         ipv4_address: 192.168.75.3
         mac_address: "02:42:c0:a8:4b:03"
+      internal:
 
 networks:
   internal:
   vlan1:
     name: homeassistant-vlan1
     driver: macvlan
+    enable_ipv6: true
     driver_opts:
       parent: vlan1
     ipam:
@@ -82,9 +83,12 @@ networks:
         - subnet: 172.27.137.0/24
           gateway: 172.27.137.1
           ip_range: 172.27.137.4/30
+        - subnet: fd00:1::/64
+          gateway: fd00:1::1
   vlan4:
     name: homeassistant-vlan4
     driver: macvlan
+    enable_ipv6: true
     driver_opts:
       parent: vlan4
     ipam:
@@ -92,6 +96,8 @@ networks:
         - subnet: 192.168.75.0/24
           gateway: 192.168.75.1
           ip_range: 192.168.75.0/30
+        - subnet: fd00:4::/64
+          gateway: fd00:4::1
   proxy:
     name: proxy
     external: true
