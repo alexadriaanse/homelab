@@ -59,9 +59,15 @@ services:
     image: ghcr.io/home-assistant-libs/python-matter-server:stable
     container_name: matter-server
     restart: unless-stopped
-    network_mode: host
     volumes:
       - /mnt/storage/appdata/matter-server:/data
+    networks:
+      vlan1:
+        ipv4_address: 172.27.137.6
+        mac_address: "02:42:ac:1b:89:06"
+      vlan4:
+        ipv4_address: 192.168.75.3
+        mac_address: "02:42:c0:a8:4b:03"
 
 networks:
   internal:
@@ -75,7 +81,7 @@ networks:
       config:
         - subnet: 172.27.137.0/24
           gateway: 172.27.137.1
-          ip_range: 172.27.137.5/32
+          ip_range: 172.27.137.4/30
         - subnet: fd00:1::/64
           gateway: fd00:1::1
   vlan4:
@@ -88,7 +94,7 @@ networks:
       config:
         - subnet: 192.168.75.0/24
           gateway: 192.168.75.1
-          ip_range: 192.168.75.2/32
+          ip_range: 192.168.75.0/30
         - subnet: fd00:4::/64
           gateway: fd00:4::1
   proxy:
