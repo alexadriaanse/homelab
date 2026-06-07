@@ -1,6 +1,19 @@
 init_config:
 
 instances:
+  - host: homeassistant-postgres
+    port: 5432
+    username: "%%env_HA_POSTGRES_USER%%"
+    password: "%%env_HA_POSTGRES_PASSWORD%%"
+    dbname: homeassistant
+    reported_hostname: homeassistant-db
+    relations:
+      - relation_regex: '.*'
+    collect_activity_metrics: true
+    collect_bloat_metrics: true
+    dbm: true
+    disable_generic_tags: true
+
   - host: immich-postgres
     port: 5432
     username: "%%env_IMMICH_POSTGRES_USER%%"

@@ -8,6 +8,7 @@ services:
     privileged: true
     environment:
       TZ: America/Chicago
+      DB_URL: postgresql://homeassistant:${HA_DB_PASSWORD}@homeassistant-postgres/homeassistant
     volumes:
       - /mnt/storage/appdata/homeassistant:/config
     networks:
@@ -20,8 +21,35 @@ services:
         mac_address: "02:42:c0:a8:4b:02"
       proxy:
       monitoring:
+    depends_on:
+      homeassistant-postgres:
+        condition: service_healthy
     healthcheck:
       test: curl -f http://localhost:8123/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  homeassistant-postgres:
+    image: postgres:18
+    container_name: homeassistant-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: homeassistant
+      POSTGRES_PASSWORD: ${HA_DB_PASSWORD}
+      POSTGRES_DB: homeassistant
+    volumes:
+      - /mnt/storage/appdata/postgres/homeassistant:/var/lib/postgresql
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c track_activity_query_size=4096
+    networks:
+      - internal
+      - monitoring
+    healthcheck:
+      test: pg_isready --dbname=homeassistant --username=homeassistant
       interval: 30s
       timeout: 10s
       retries: 5
