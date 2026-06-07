@@ -61,7 +61,12 @@ services:
     restart: unless-stopped
     volumes:
       - /mnt/storage/appdata/matter-server:/data
-    command: --storage-path /data --paa-root-cert-dir /data/credentials --primary-interface eth0
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        IFACE=$(ip -o addr show | awk '/172.27.137.6/{print $$2}')
+        exec matter-server --storage-path /data --paa-root-cert-dir /data/credentials --primary-interface $$IFACE
     networks:
       vlan1:
         ipv4_address: 172.27.137.6
