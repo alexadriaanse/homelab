@@ -1,0 +1,18 @@
+init_config:
+
+instances:
+  - hostname: 192.168.73.1
+    protocol: ICMP
+  - hostname: 8.8.8.8
+    protocol: ICMP
+  - hostname: 1.1.1.1
+    protocol: ICMP
+  - hostname: courier.push.apple.com
+    protocol: TCP
+    port: 5223
+  - hostname: apple.com
+    protocol: TCP
+    port: 443
+  - hostname: google.com
+    protocol: TCP
+    port: 443

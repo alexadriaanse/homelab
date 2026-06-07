@@ -20,6 +20,8 @@ services:
       TESLAMATE_POSTGRES_PASSWORD: ${TESLAMATE_POSTGRES_PASSWORD}
       IMMICH_POSTGRES_USER: ${IMMICH_POSTGRES_USER}
       IMMICH_POSTGRES_PASSWORD: ${IMMICH_POSTGRES_PASSWORD}
+      SNMP_AUTH_KEY: ${SNMP_AUTH_KEY}
+      SNMP_PRIV_KEY: ${SNMP_PRIV_KEY}
     ports:
       - "2055:2055/udp"   # NetFlow
     volumes:
@@ -30,6 +32,8 @@ services:
       - ./conf.d/docker.d:/etc/datadog-agent/conf.d/docker.d:ro
       - ./conf.d/linux.d:/etc/datadog-agent/conf.d/linux.d:ro
       - ./conf.d/postgres.d:/etc/datadog-agent/conf.d/postgres.d:ro
+      - ./conf.d/network_path.d:/etc/datadog-agent/conf.d/network_path.d:ro
+      - ./conf.d/snmp.d:/etc/datadog-agent/conf.d/snmp.d:ro
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
       - /:/host/root:ro
@@ -45,6 +49,8 @@ services:
     networks:
       - default
       - monitoring
+    extra_hosts:
+      - "truenas:host-gateway"
     pid: host
     cap_add:
       - SYS_ADMIN

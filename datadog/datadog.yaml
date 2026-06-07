@@ -1,6 +1,10 @@
 # Settings not expressible as DD_ environment variables.
 # Secrets (api_key, etc.) and standard flags are configured via environment variables in compose.yml.
 
+network_path:
+  connections_monitoring:
+    enabled: true
+
 config_providers:
   - name: docker
     polling: true

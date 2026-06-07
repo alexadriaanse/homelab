@@ -3,3 +3,12 @@ network_config:
 
 runtime_security_config:
   enabled: true
+
+service_monitoring_config:
+  enabled: true
+
+ping:
+  enabled: true
+
+traceroute:
+  enabled: true

@@ -13,3 +13,7 @@ logs:
     path: /host/root/var/log/auth.log
     service: system
     source: auth
+  - type: file
+    path: /host/root/var/log/audit/audit.log
+    service: audit
+    source: linux-audit-logs

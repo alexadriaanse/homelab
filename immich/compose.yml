@@ -60,6 +60,7 @@ services:
       -c shared_buffers=8GB
       -c effective_cache_size=32GB
       -c maintenance_work_mem=2GB
+      -c track_activity_query_size=4096
     networks:
       - default
       - monitoring

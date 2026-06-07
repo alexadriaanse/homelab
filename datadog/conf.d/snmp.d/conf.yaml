@@ -1,0 +1,15 @@
+init_config:
+  loader: python
+
+instances:
+  - ip_address: truenas
+    port: 161
+    snmp_version: 3
+    user: datadog
+    authProtocol: SHA
+    authKey: "%%env_SNMP_AUTH_KEY%%"
+    privProtocol: AES
+    privKey: "%%env_SNMP_PRIV_KEY%%"
+    profile: ixsystems-truenas
+    loader: python
+    collect_device_metadata: true
