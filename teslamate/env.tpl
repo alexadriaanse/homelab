@@ -1,3 +1,3 @@
 ENCRYPTION_KEY='{{ op://NAS/TeslaMate encryption key/credential }}'
-DATABASE_USER='{{ op://NAS/TeslaMate DB password/username }}'
-DATABASE_PASS='{{ op://NAS/TeslaMate DB password/password }}'
+DB_USERNAME='{{ op://NAS/TeslaMate DB password/username }}'
+DB_PASSWORD='{{ op://NAS/TeslaMate DB password/password }}'

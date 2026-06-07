@@ -7,8 +7,8 @@ services:
     restart: unless-stopped
     environment:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      DATABASE_USER: ${DATABASE_USER}
-      DATABASE_PASS: ${DATABASE_PASS}
+      DATABASE_USER: ${DB_USERNAME}
+      DATABASE_PASS: ${DB_PASSWORD}
       DATABASE_NAME: teslamate
       DATABASE_HOST: teslamate-postgres
       MQTT_HOST: teslamate-mosquitto
@@ -30,8 +30,8 @@ services:
     container_name: teslamate-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DATABASE_USER}
-      POSTGRES_PASSWORD: ${DATABASE_PASS}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: teslamate
     volumes:
       - /mnt/storage/appdata/postgres/teslamate:/var/lib/postgresql
@@ -60,8 +60,8 @@ services:
     container_name: teslamate-grafana
     restart: unless-stopped
     environment:
-      DATABASE_USER: ${DATABASE_USER}
-      DATABASE_PASS: ${DATABASE_PASS}
+      DATABASE_USER: ${DB_USERNAME}
+      DATABASE_PASS: ${DB_PASSWORD}
       DATABASE_NAME: teslamate
       DATABASE_HOST: teslamate-postgres
     volumes:
