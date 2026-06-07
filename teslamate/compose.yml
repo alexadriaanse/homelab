@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      DATABASE_USER: teslamate
+      DATABASE_USER: ${DATABASE_USER}
       DATABASE_PASS: ${DATABASE_PASS}
       DATABASE_NAME: teslamate
       DATABASE_HOST: teslamate-postgres
@@ -30,7 +30,7 @@ services:
     container_name: teslamate-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: teslamate
+      POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASS}
       POSTGRES_DB: teslamate
     volumes:
@@ -43,7 +43,7 @@ services:
       - default
       - monitoring
     healthcheck:
-      test: pg_isready --dbname=teslamate --username=teslamate
+      test: pg_isready --dbname=${POSTGRES_DB} --username=${POSTGRES_USER}
       interval: 30s
       timeout: 10s
       retries: 5
@@ -60,7 +60,7 @@ services:
     container_name: teslamate-grafana
     restart: unless-stopped
     environment:
-      DATABASE_USER: teslamate
+      DATABASE_USER: ${DATABASE_USER}
       DATABASE_PASS: ${DATABASE_PASS}
       DATABASE_NAME: teslamate
       DATABASE_HOST: teslamate-postgres

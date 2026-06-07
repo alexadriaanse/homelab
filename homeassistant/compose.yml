@@ -8,7 +8,7 @@ services:
     privileged: true
     environment:
       TZ: America/Chicago
-      DB_URL: postgresql://homeassistant:${HA_DB_PASSWORD}@homeassistant-postgres/homeassistant
+      DB_URL: postgresql://${HA_DB_USERNAME}:${HA_DB_PASSWORD}@homeassistant-postgres/homeassistant
     volumes:
       - /mnt/storage/appdata/homeassistant:/config
     networks:
@@ -36,7 +36,7 @@ services:
     container_name: homeassistant-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: homeassistant
+      POSTGRES_USER: ${HA_DB_USERNAME}
       POSTGRES_PASSWORD: ${HA_DB_PASSWORD}
       POSTGRES_DB: homeassistant
     volumes:
@@ -49,7 +49,7 @@ services:
       - internal
       - monitoring
     healthcheck:
-      test: pg_isready --dbname=homeassistant --username=homeassistant
+      test: pg_isready --dbname=${POSTGRES_DB} --username=${POSTGRES_USER}
       interval: 30s
       timeout: 10s
       retries: 5

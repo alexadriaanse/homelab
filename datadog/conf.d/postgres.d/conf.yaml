@@ -3,7 +3,7 @@ init_config:
 instances:
   - host: homeassistant-postgres
     port: 5432
-    username: "%%env_HA_POSTGRES_USER%%"
+    username: "%%env_HA_POSTGRES_USERNAME%%"
     password: "%%env_HA_POSTGRES_PASSWORD%%"
     dbname: homeassistant
     reported_hostname: homeassistant-db
@@ -16,7 +16,7 @@ instances:
 
   - host: immich-postgres
     port: 5432
-    username: "%%env_IMMICH_POSTGRES_USER%%"
+    username: "%%env_IMMICH_POSTGRES_USERNAME%%"
     password: "%%env_IMMICH_POSTGRES_PASSWORD%%"
     dbname: immich
     reported_hostname: immich-db
@@ -29,7 +29,7 @@ instances:
 
   - host: teslamate-postgres
     port: 5432
-    username: "%%env_TESLAMATE_POSTGRES_USER%%"
+    username: "%%env_TESLAMATE_POSTGRES_USERNAME%%"
     password: "%%env_TESLAMATE_POSTGRES_PASSWORD%%"
     dbname: teslamate
     reported_hostname: teslamate-db
