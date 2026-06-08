@@ -1,6 +1,6 @@
 DD_API_KEY='{{ op://NAS/Datadog agent API key/credential }}'
-HA_POSTGRES_USERNAME='{{ op://NAS/Home Assistant DB/username }}'
-HA_POSTGRES_PASSWORD='{{ op://NAS/Home Assistant DB/password }}'
+HA_POSTGRES_USERNAME='{{ op://NAS/Home Assistant DB datadog/username }}'
+HA_POSTGRES_PASSWORD='{{ op://NAS/Home Assistant DB datadog/password }}'
 TESLAMATE_POSTGRES_USERNAME='{{ op://NAS/TeslaMate DB datadog/username }}'
 TESLAMATE_POSTGRES_PASSWORD='{{ op://NAS/TeslaMate DB datadog/password }}'
 IMMICH_POSTGRES_USERNAME='{{ op://NAS/Immich DB datadog/username }}'
