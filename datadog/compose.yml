@@ -26,6 +26,7 @@ services:
       SNMP_PRIV_KEY: ${SNMP_PRIV_KEY}
     ports:
       - "2055:2055/udp"   # NetFlow
+      - "8125:8125/udp"   # DogStatsD
     volumes:
       - /mnt/storage/appdata/datadog/run:/opt/datadog-agent/run:rw
       - ./datadog.yaml:/etc/datadog-agent/datadog.yaml:ro
