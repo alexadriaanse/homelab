@@ -2,7 +2,7 @@ homeassistant.alexandcarmen.com {
 	tls {
 		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 	}
-	reverse_proxy homeassistant:8123
+	reverse_proxy haos.alexandcarmen.com:8123
 }
 
 photos.alexandcarmen.com {
